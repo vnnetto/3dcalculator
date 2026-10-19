@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Calculadora de custo de impressão 3D</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b7f7a" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f161d" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Custo 3D">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#eef1f4;--surface:#fff;--ink:#17222d;--muted:#58677a;--line:#d3dae2;--accent:#0b7f7a;
+--c1:#0b7f7a;--c2:#2f9e8f;--c3:#78bfb1;--c4:#e0a43a;--c5:#d1703c;--c6:#8a97a6;--c7:#2d3e50;
+color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f161d;--surface:#17212b;--ink:#e6edf3;--muted:#9aa8b6;--line:#2a3744;--accent:#3cc0b8;--c1:#2aa8a0;--c7:#a9bdd1;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f161d;--surface:#17212b;--ink:#e6edf3;--muted:#9aa8b6;--line:#2a3744;--accent:#3cc0b8;--c1:#2aa8a0;--c7:#a9bdd1;color-scheme:dark}
+html{background:var(--bg);scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 20px 48px}
+h1{font:700 clamp(1.7rem,4vw,2.4rem)/1.1 "Bricolage Grotesque",Georgia,serif;margin:0 0 6px;letter-spacing:-.01em}
+.lead{margin:0 0 28px;color:var(--muted);max-width:60ch}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:36px;align-items:start}
+section{border-top:1px solid var(--line);padding:18px 0 22px}
+h2{font:600 1.15rem/1.2 "Bricolage Grotesque",Georgia,serif;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.wide{grid-column:1/-1}
+label{font-size:.88rem;font-weight:500}
+.in,select,input[type=text]{display:flex;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+input,select{flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;padding:9px 10px;border-radius:6px}
+select,input[type=text]{padding:9px 10px;width:100%;box-sizing:border-box}
+.u{padding:9px 10px;color:var(--muted);font-size:.85rem;border-left:1px solid var(--line);white-space:nowrap}
+.in:focus-within,select:focus,input[type=text]:focus{outline:2px solid var(--accent);outline-offset:1px}
+input:focus{outline:none}
+.res{position:sticky;top:calc(16px + env(safe-area-inset-top,0px));background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px}
+.k{margin:0;font-size:.9rem;color:var(--muted)}
+.big{font:700 2.6rem/1.1 "Bricolage Grotesque",Georgia,serif;margin:2px 0 2px;letter-spacing:-.02em}
+.sub{margin:0;color:var(--muted);font-size:.92rem;overflow-wrap:anywhere}
+.part{display:grid;grid-template-columns:64px 1fr;gap:16px;margin:20px 0 6px}
+.stack{height:230px;display:flex;flex-direction:column-reverse;border-radius:8px 8px 3px 3px;overflow:hidden;position:relative;background:var(--line)}
+.stack::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 5px)}
+.seg{transition:flex-grow .35s ease;min-height:0}
+.legend{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;justify-content:space-between;font-size:.86rem}
+.legend li{display:grid;grid-template-columns:10px 1fr auto;gap:8px;align-items:center}
+.sw{width:10px;height:10px;border-radius:2px}
+.legend b{font-weight:600;font-variant-numeric:tabular-nums}
+.sum{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:.92rem}
+.sum div{display:flex;justify-content:space-between;padding:2px 0}
+.sum dt{color:var(--muted)}.sum dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums}
+.warn{color:#b3261e;font-size:.9rem;margin:10px 0 0;min-height:1.2em}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .warn{color:#ff8a80}}
+.btn{margin-top:14px;font:inherit;font-size:.88rem;padding:8px 12px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--accent)}.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.note{color:var(--muted);font-size:.85rem;margin-top:20px}
+.share{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.share .btn{margin-top:0;text-decoration:none;display:inline-block;text-align:center}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .btn.pri{color:#04201f}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.pri{color:#04201f}}
+.prev{white-space:pre-wrap;font-size:.86rem;color:var(--muted);border-left:3px solid var(--line);padding:2px 0 2px 10px;margin:12px 0 0;overflow-wrap:anywhere}
+.hint{min-height:1.2em;font-size:.86rem;margin:8px 0 0;color:var(--accent)}
+.bar{display:none}
+@media (max-width:860px){.layout{grid-template-columns:1fr}.res{order:-1;position:static}.wrap{padding-bottom:96px}.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));font:700 1.3rem "Bricolage Grotesque",Georgia,serif}.bar .btn{margin-top:0;font-family:"Public Sans",system-ui,sans-serif}}
+@media (prefers-reduced-motion:reduce){.seg{transition:none}}
+.instbox{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-12px 0 22px}.instbox[hidden]{display:none}.instbox .btn{margin-top:0}.instbox .note{margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Custo de impressão 3D</h1>
+  <p class="lead">Preencha com os dados do fatiador e da sua máquina. O preço de venda é atualizado a cada alteração.</p>
+  <div class="instbox" id="instBox" hidden><button class="btn pri" id="install" type="button">Instalar app</button><span class="note" id="instHint"></span></div>
+  <div class="layout">
+    <div id="form"></div>
+    <aside class="res" aria-live="polite">
+      <p class="k">Preço de venda sugerido</p>
+      <p class="big" id="preco">R$ 0,00</p>
+      <p class="sub" id="peca"></p>
+      <div class="part">
+        <div class="stack" id="stack" role="img" aria-label="Composição do preço, de baixo para cima: material, energia, máquina, mão de obra, falhas, taxas e lucro"></div>
+        <ul class="legend" id="legend"></ul>
+      </div>
+      <p class="warn" id="warn"></p>
+      <dl class="sum">
+        <div><dt>Custo de produção</dt><dd id="custo"></dd></div>
+        <div><dt>Lucro</dt><dd id="lucro"></dd></div>
+        <div><dt>Tempo de impressão</dt><dd id="tempo"></dd></div>
+      </dl>
+      <div class="share">
+        <button class="btn pri" id="share" type="button">Compartilhar orçamento</button>
+        <a class="btn" id="wa" href="#" target="_blank" rel="noopener">WhatsApp</a>
+        <button class="btn" id="copy" type="button">Copiar texto</button>
+      </div>
+      <p class="hint" id="msg"></p>
+      <p class="prev" id="prev"></p>
+      <button class="btn" id="reset" type="button">Restaurar valores de exemplo</button>
+    </aside>
+  </div>
+  <div class="bar"><span id="barPreco">R$ 0,00</span><button class="btn pri" id="share2" type="button">Compartilhar</button></div>
+  <p class="note">Os valores iniciais são exemplos: ajuste para a sua realidade. Seus dados ficam salvos apenas neste navegador.</p>
+</div>
+<script>
+const MAT={PLA:100,PETG:110,ABS:120,TPU:180,Resina:200};
+const F=[
+ {sec:'Peça',items:[
+  {id:'nome',label:'Nome da peça',type:'text',def:'Suporte de fone',wide:1},
+  {id:'peso',label:'Peso total da impressão',unit:'g',def:85},
+  {id:'qtd',label:'Peças na mesma impressão',unit:'un',def:1},
+  {id:'horas',label:'Horas de impressão',unit:'h',def:4},
+  {id:'min',label:'Minutos de impressão',unit:'min',def:30}]},
+ {sec:'Material',items:[
+  {id:'mat',label:'Tipo de material',type:'select',def:'PLA'},
+  {id:'precoKg',label:'Preço por kg (ou por litro, se resina)',unit:'R$',def:100},
+  {id:'desp',label:'Desperdício (suportes e purga)',unit:'%',def:8}]},
+ {sec:'Energia e máquina',items:[
+  {id:'pot',label:'Potência média da impressora',unit:'W',def:150},
+  {id:'tarifa',label:'Tarifa de energia',unit:'R$/kWh',def:0.95},
+  {id:'precoMaq',label:'Preço da impressora',unit:'R$',def:2800},
+  {id:'vida',label:'Vida útil estimada',unit:'h',def:5000},
+  {id:'manut',label:'Manutenção e peças de desgaste',unit:'R$/h',def:0.4}]},
+ {sec:'Trabalho e riscos',items:[
+  {id:'trabMin',label:'Tempo de trabalho manual',unit:'min',def:20},
+  {id:'horaTrab',label:'Valor da sua hora',unit:'R$/h',def:25},
+  {id:'falha',label:'Taxa de falha',unit:'%',def:7}]},
+ {sec:'Preço de venda',items:[
+  {id:'margem',label:'Margem de lucro (% do preço)',unit:'%',def:40},
+  {id:'taxas',label:'Taxas e impostos (% do preço)',unit:'%',def:12}]},
+ {sec:'Orçamento para o cliente',items:[
+  {id:'obs',label:'Observação (prazo, cor, validade)',type:'text',def:'',wide:1}]}
+];
+const D={};F.forEach(s=>s.items.forEach(i=>D[i.id]=i.def));
+let S={...D};
+try{const r=localStorage.getItem('calc3d');if(r)S={...D,...JSON.parse(r)}}catch(e){}
+const save=()=>{try{localStorage.setItem('calc3d',JSON.stringify(S))}catch(e){}};
+const $=id=>document.getElementById(id);
+const n=v=>{const x=parseFloat(String(v).replace(',','.'));return isFinite(x)?Math.max(0,x):0};
+const brl=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+
+const form=$('form');
+F.forEach(s=>{
+  const sec=document.createElement('section');
+  sec.innerHTML='<h2>'+s.sec+'</h2><div class="grid"></div>';
+  const g=sec.querySelector('.grid');
+  s.items.forEach(i=>{
+    const d=document.createElement('div');d.className='f'+(i.wide?' wide':'');
+    let c;
+    if(i.type==='select')c='<select id="'+i.id+'">'+Object.keys(MAT).map(k=>'<option>'+k+'</option>').join('')+'</select>';
+    else if(i.type==='text')c='<input id="'+i.id+'" type="text" maxlength="120">';
+    else c='<div class="in"><input id="'+i.id+'" type="number" inputmode="decimal" step="any" min="0"><span class="u">'+i.unit+'</span></div>';
+    d.innerHTML='<label for="'+i.id+'">'+i.label+'</label>'+c;
+    g.appendChild(d);
+  });
+  form.appendChild(sec);
+});
+const fill=()=>Object.keys(D).forEach(id=>{$(id).value=S[id]});
+fill();
+
+const SEG=[['Material','--c1'],['Energia','--c2'],['Máquina','--c3'],['Mão de obra','--c4'],['Falhas','--c5'],['Taxas e impostos','--c6'],['Lucro','--c7']];
+SEG.forEach(s=>{const d=document.createElement('div');d.className='seg';d.style.background='var('+s[1]+')';$('stack').appendChild(d)});
+const segEls=[...document.querySelectorAll('.seg')];
+
+let TXT='';
+function calc(){
+  const g=id=>n(S[id]);
+  const h=g('horas')+g('min')/60, qtd=Math.max(1,Math.round(g('qtd'))||1);
+  const mat=g('peso')*(1+g('desp')/100)/1000*g('precoKg');
+  const en=g('pot')/1000*h*g('tarifa');
+  const maq=((g('vida')>0?g('precoMaq')/g('vida'):0)+g('manut'))*h;
+  const mo=g('trabMin')/60*g('horaTrab');
+  const base=mat+en+maq+mo, falha=base*g('falha')/100, custo=base+falha;
+  const pct=g('margem')+g('taxas'), ok=pct<100;
+  const preco=ok?custo/(1-pct/100):0;
+  const taxas=preco*g('taxas')/100, lucro=preco*g('margem')/100;
+  const vals=[mat,en,maq,mo,falha,taxas,lucro];
+  const tot=vals.reduce((a,b)=>a+b,0);
+
+  $('warn').textContent=ok?'':'Margem e taxas somam 100% ou mais. Reduza um dos valores para ver o preço.';
+  $('preco').textContent=ok?brl(preco):'—';
+  $('peca').textContent=(S.nome?S.nome+': ':'')+(qtd>1?(ok?brl(preco/qtd):'—')+' por peça, em uma impressão de '+qtd+' peças':'uma peça nesta impressão');
+  $('custo').textContent=brl(custo);
+  $('lucro').textContent=ok?brl(lucro):'—';
+  const hh=Math.floor(h),mm=Math.round((h-hh)*60);
+  $('tempo').textContent=hh+' h '+String(mm).padStart(2,'0')+' min';
+  $('barPreco').textContent=ok?brl(preco):'—';
+  TXT=ok?['Orçamento de impressão 3D','Peça: '+(S.nome||'sem nome'),'Quantidade: '+qtd+(qtd>1?' peças':' peça'),qtd>1?'Valor por peça: '+brl(preco/qtd):'','Valor total: '+brl(preco),S.obs?String(S.obs):''].filter(Boolean).join('\n'):'';
+  $('prev').textContent=TXT;
+  $('wa').href=TXT?'https://wa.me/?text='+encodeURIComponent(TXT):'#';
+
+  segEls.forEach((el,i)=>{el.style.flexGrow=(ok&&tot>0)?(vals[i]/tot*100):0;el.style.flexShrink=1;el.style.flexBasis='0'});
+  $('legend').innerHTML=SEG.map((s,i)=>({s,i,v:vals[i]})).reverse().map(o=>
+    '<li><span class="sw" style="background:var('+o.s[1]+')"></span><span>'+o.s[0]+'</span><b>'+(ok?brl(o.v):'—')+'</b></li>').join('');
+}
+
+function onChange(e){
+  const id=e.target.id;if(!(id in D))return;
+  S[id]=e.target.value;
+  if(id==='mat'){S.precoKg=MAT[S.mat];$('precoKg').value=S.precoKg}
+  save();calc();
+}
+form.addEventListener('input',onChange);
+form.addEventListener('change',onChange);
+$('reset').addEventListener('click',()=>{S={...D};fill();save();calc()});
+const say=t=>{$('msg').textContent=t;setTimeout(()=>{$('msg').textContent=''},3500)};
+const NOK='Corrija a margem e as taxas para gerar o orçamento.';
+$('wa').addEventListener('click',e=>{if(!TXT){e.preventDefault();say(NOK)}});
+$('copy').addEventListener('click',async()=>{if(!TXT)return say(NOK);try{await navigator.clipboard.writeText(TXT);say('Texto copiado.')}catch(e){say('Não foi possível copiar aqui. Use o botão WhatsApp ou Compartilhar.')}});
+const doShare=async()=>{if(!TXT)return say(NOK);if(navigator.share){try{await navigator.share({text:TXT})}catch(e){}}else say('Este navegador não abre o menu de compartilhamento. Use o botão WhatsApp ou Copiar texto.')};
+$('share').addEventListener('click',doShare);
+$('share2').addEventListener('click',doShare);
+calc();
+if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); }); }
+let dp = null;
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); dp = e; if (!standalone) $('instBox').hidden = false; });
+$('install').addEventListener('click', async () => { if (!dp) return; dp.prompt(); try { await dp.userChoice; } catch (e) {} dp = null; $('instBox').hidden = true; });
+window.addEventListener('appinstalled', () => { $('instBox').hidden = true; });
+if (!standalone && /iphone|ipad|ipod/i.test(navigator.userAgent)) {
+  $('instBox').hidden = false; $('install').hidden = true;
+  $('instHint').textContent = 'No iPhone: toque em Compartilhar e depois em “Adicionar à Tela de Início”.';
+}
+</script>
+</body>
+</html>
